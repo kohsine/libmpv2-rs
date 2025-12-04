@@ -145,7 +145,7 @@ unsafe extern "C" fn ru_wrapper<F: Fn() + Send + 'static>(ctx: *mut c_void) {
 impl<C> From<OpenGLInitParams<C>> for libmpv2_sys::mpv_opengl_init_params {
     fn from(val: OpenGLInitParams<C>) -> Self {
         Self {
-            get_proc_address: Some(gpa_wrapper::<OpenGLInitParams<C>>),
+            get_proc_address: Some(gpa_wrapper::<C>),
             get_proc_address_ctx: Box::into_raw(Box::new(val)) as *mut c_void,
         }
     }
