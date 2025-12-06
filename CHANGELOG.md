@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## Version 5.0.2
+
+- Fix segfault in rendering protocol caused by wrong generic @BKSalman
+
 ## Version 5.0.1
 
 - Fix stream protocol overwriting cookie
