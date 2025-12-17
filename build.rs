@@ -41,7 +41,9 @@ fn main() {
     // The mpv build script interprets the TARGET env var, which is set by cargo to e.g.
     // x86_64-unknown-linux-gnu, thus the script can't find the compiler.
     // TODO: When Cross-compiling to different archs is implemented, this has to be handled.
-    env::remove_var("TARGET");
+    unsafe {
+        env::remove_var("TARGET");
+    }
 
     let cmd = format!("cd {} && {0}/build -j{}", source, num_threads);
 
