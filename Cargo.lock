@@ -176,7 +176,7 @@ dependencies = [
 
 [[package]]
 name = "libmpv2"
-version = "5.0.2"
+version = "5.0.3"
 dependencies = [
  "crossbeam",
  "libmpv2-sys",

@@ -3,7 +3,7 @@ members = ["libmpv-sys"]
 
 [package]
 name = "libmpv2"
-version = "5.0.2"
+version = "5.0.3"
 edition = "2024"
 authors = ["kohsine <kevoh1516@gmail.com>"]
 license = "LGPL-2.1"

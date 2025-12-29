@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## Version 5.0.3
+
+- Fix build_mpv failing on rust 2024 edition @ckaznable
+
 ## Version 5.0.2
 
 - Fix segfault in rendering protocol caused by wrong generic @BKSalman
