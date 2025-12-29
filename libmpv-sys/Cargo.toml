@@ -1,6 +1,6 @@
 [package]
 name = "libmpv2-sys"
-version = "4.0.0"
+version = "4.0.1"
 edition = "2021"
 authors = ["kohsine <kevoh1516@gmail.com>"]
 license = "LGPL-2.1"
@@ -10,7 +10,7 @@ repository = "https://github.com/kohsine/libmpv-rs"
 keywords = ["media", "playback", "mpv", "libmpv"]
 
 [build-dependencies.bindgen]
-version = "0.69.4"
+version = "0.72.1"
 optional = true
 
 # Workaround for https://github.com/rust-lang/rust-bindgen/issues/1313

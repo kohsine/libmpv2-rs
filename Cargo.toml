@@ -15,7 +15,7 @@ keywords = ["media", "playback", "mpv", "libmpv"]
 
 
 [dependencies]
-libmpv2-sys = { path = "libmpv-sys", version = "4.0.0" }
+libmpv2-sys = { path = "libmpv-sys", version = "4.0.1" }
 
 [dev-dependencies]
 crossbeam = "0.8.4"
