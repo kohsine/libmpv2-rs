@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Exclude `test-data/` folder from publishing to reduce download size
+
 ## Version 5.0.3
 
 - Fix build_mpv failing on rust 2024 edition @ckaznable

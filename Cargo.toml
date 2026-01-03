@@ -12,6 +12,7 @@ readme = "README.md"
 description = "Libmpv abstraction that's easy to use and can play next to all codecs and containers"
 repository = "https://github.com/kohsine/libmpv-rs"
 keywords = ["media", "playback", "mpv", "libmpv"]
+exclude = ["test-data/"]
 
 
 [dependencies]
