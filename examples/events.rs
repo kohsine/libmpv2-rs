@@ -17,11 +17,11 @@ fn main() -> Result<()> {
     .unwrap();
     mpv.set_property("volume", 15)?;
 
-    mpv.disable_deprecated_events()?;
-    mpv.observe_property("volume", Format::Int64, 0)?;
-    mpv.observe_property("demuxer-cache-state", Format::String, 0)?;
-
     let mut mpv_client = mpv.create_client(None)?;
+
+    mpv_client.disable_deprecated_events()?;
+    mpv_client.observe_property("volume", Format::Int64, 0)?;
+    mpv_client.observe_property("demuxer-cache-state", Format::String, 0)?;
 
     crossbeam::scope(|scope| {
         scope.spawn(|_| {
