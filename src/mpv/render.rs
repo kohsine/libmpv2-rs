@@ -12,7 +12,7 @@ pub struct RenderContext {
 }
 
 /// For initializing the mpv OpenGL state via RenderParam::OpenGLInitParams
-pub struct OpenGLInitParams<GLContext> {
+pub struct OpenGLInitParams<GLContext: 'static> {
     /// This retrieves OpenGL function pointers, and will use them in subsequent
     /// operation.
     /// Usually, you can simply call the GL context APIs from this callback (e.g.
@@ -81,7 +81,7 @@ pub enum RenderParamApiType {
     OpenGl,
 }
 
-pub enum RenderParam<GLContext> {
+pub enum RenderParam<GLContext: 'static> {
     Invalid,
     ApiType(RenderParamApiType),
     InitParams(OpenGLInitParams<GLContext>),
@@ -119,7 +119,7 @@ impl<C> From<&RenderParam<C>> for u32 {
     }
 }
 
-unsafe extern "C" fn gpa_wrapper<GLContext>(ctx: *mut c_void, name: *const c_char) -> *mut c_void {
+unsafe extern "C" fn gpa_wrapper<GLContext: 'static>(ctx: *mut c_void, name: *const c_char) -> *mut c_void {
     if ctx.is_null() {
         panic!("ctx for get_proc_address wrapper is NULL");
     }
@@ -195,13 +195,13 @@ unsafe fn free_void_data<T>(ptr: *mut c_void) {
     drop(unsafe { Box::<T>::from_raw(ptr as *mut T) });
 }
 
-unsafe fn free_init_params<C>(ptr: *mut c_void) {
+unsafe fn free_init_params<C: 'static>(ptr: *mut c_void) {
     let params = unsafe { Box::from_raw(ptr as *mut libmpv2_sys::mpv_opengl_init_params) };
     drop(unsafe { Box::from_raw(params.get_proc_address_ctx as *mut OpenGLInitParams<C>) });
 }
 
 impl RenderContext {
-    pub fn new<C>(
+    pub fn new<C: 'static>(
         mpv: &mut libmpv2_sys::mpv_handle,
         params: impl IntoIterator<Item = RenderParam<C>>,
     ) -> Result<Self> {
@@ -256,7 +256,7 @@ impl RenderContext {
         }
     }
 
-    pub fn set_parameter<C>(&self, param: RenderParam<C>) -> Result<()> {
+    pub fn set_parameter<C: 'static>(&self, param: RenderParam<C>) -> Result<()> {
         unsafe {
             mpv_err(
                 (),
@@ -268,7 +268,7 @@ impl RenderContext {
         }
     }
 
-    pub fn get_info<C>(&self, param: RenderParam<C>) -> Result<RenderParam<C>> {
+    pub fn get_info<C: 'static>(&self, param: RenderParam<C>) -> Result<RenderParam<C>> {
         let is_next_frame_info = matches!(param, RenderParam::NextFrameInfo(_));
         let raw_param = libmpv2_sys::mpv_render_param::from(param);
         let res = unsafe { libmpv2_sys::mpv_render_context_get_info(self.ctx, raw_param) };
@@ -321,7 +321,7 @@ impl RenderContext {
     /// * `flip` - Whether to draw the image upside down. This is needed for OpenGL because
     ///            it uses a coordinate system with positive Y up, but videos use positive
     ///            Y down.
-    pub fn render<GLContext>(&self, fbo: i32, width: i32, height: i32, flip: bool) -> Result<()> {
+    pub fn render<GLContext: 'static>(&self, fbo: i32, width: i32, height: i32, flip: bool) -> Result<()> {
         let mut raw_params: Vec<libmpv2_sys::mpv_render_param> = Vec::with_capacity(3);
         let mut raw_ptrs: HashMap<*const c_void, DeleterFn> = HashMap::new();
 
