@@ -395,6 +395,31 @@ impl Mpv {
         })
     }
 
+    /// Same as [`Mpv::command`], but run the command asynchronously.
+    /// 
+    /// Commands are executed asynchronously. You will receive a
+    /// `MPV_EVENT_COMMAND_REPLY` event.
+    /// 
+    /// The only case when you do not receive an event is when the function call
+    /// itself fails. This happens only if parsing the command itself (or otherwise
+    /// validating it) fails, i.e. the return code of the API call is not 0 or
+    /// positive.
+    pub fn command_async(&self, name: &str, userdata: u64, args: &[&str]) -> Result<()> {
+        let mut cstr_args: Vec<CString> = Vec::with_capacity(args.len() + 1);
+        cstr_args.push(CString::new(name)?);
+
+        for arg in args {
+            cstr_args.push(CString::new(*arg)?);
+        }
+
+        let mut ptrs: Vec<_> = cstr_args.iter().map(|cstr| cstr.as_ptr()).collect();
+        ptrs.push(std::ptr::null());
+
+        mpv_err((), unsafe {
+            libmpv2_sys::mpv_command_async(self.ctx.as_ptr(), userdata, ptrs.as_mut_ptr())
+        })
+    }
+
     /// Set a property to a given value. Properties are essentially variables which
     /// can be queried or set at runtime. For example, writing to the pause property
     /// will actually pause or unpause playback.
