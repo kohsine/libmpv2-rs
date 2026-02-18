@@ -184,7 +184,7 @@ impl Mpv {
     /// Returns `Some(Err(...))` if there was invalid utf-8, or if either an
     /// `MPV_EVENT_GET_PROPERTY_REPLY`, `MPV_EVENT_SET_PROPERTY_REPLY`, `MPV_EVENT_COMMAND_REPLY`,
     /// or `MPV_EVENT_PROPERTY_CHANGE` event failed, or if `MPV_EVENT_END_FILE` reported an error.
-    pub fn wait_event(&mut self, timeout: f64) -> Option<Result<Event<'_>>> {
+    pub fn wait_event(&self, timeout: f64) -> Option<Result<Event<'_>>> {
         let event = unsafe { *libmpv2_sys::mpv_wait_event(self.ctx.as_ptr(), timeout) };
         if event.event_id != mpv_event_id::None {
             if let Err(e) = mpv_err((), event.error) {
@@ -322,14 +322,15 @@ impl Mpv {
     /// dispatches the result to a callback.
     ///
     /// Only one wakeup callback can be set.
-    pub fn set_wakeup_callback<F: Fn() + Send + 'static>(&mut self, callback: F) {
+    pub fn set_wakeup_callback<F: Fn() + Send + 'static>(&self, callback: F) {
         if let Some(wakeup_callback_cleanup) = self.wakeup_callback_cleanup.take() {
             wakeup_callback_cleanup();
         }
         let raw_callback = Box::into_raw(Box::new(callback));
-        self.wakeup_callback_cleanup = Some(Box::new(move || unsafe {
-            drop(Box::from_raw(raw_callback));
-        }) as Box<dyn FnOnce()>);
+        self.wakeup_callback_cleanup
+            .replace(Some(Box::new(move || unsafe {
+                drop(Box::from_raw(raw_callback));
+            }) as Box<dyn FnOnce()>));
         unsafe {
             libmpv2_sys::mpv_set_wakeup_callback(
                 self.ctx.as_ptr(),

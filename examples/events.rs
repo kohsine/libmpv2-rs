@@ -17,7 +17,7 @@ fn main() -> Result<()> {
     .unwrap();
     mpv.set_property("volume", 15)?;
 
-    let mut mpv_client = mpv.create_client(None)?;
+    let mpv_client = mpv.create_client(None)?;
 
     mpv_client.disable_deprecated_events()?;
     mpv_client.observe_property("volume", Format::Int64, 0)?;

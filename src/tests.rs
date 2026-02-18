@@ -66,7 +66,7 @@ macro_rules! assert_event_occurs {
 
 #[test]
 fn events() {
-    let mut mpv = Mpv::new().unwrap();
+    let mpv = Mpv::new().unwrap();
     mpv.disable_deprecated_events().unwrap();
 
     mpv.observe_property("volume", Format::Int64, 0).unwrap();

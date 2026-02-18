@@ -1,4 +1,6 @@
+use crate::Mpv;
 use crate::{Error, Result, mpv::mpv_err};
+use std::cell::Cell;
 use std::collections::HashMap;
 use std::ffi::{CStr, c_char, c_void};
 use std::os::raw::c_int;
@@ -6,12 +8,13 @@ use std::ptr;
 
 type DeleterFn = unsafe fn(*mut c_void);
 
-pub struct RenderContext {
+pub struct RenderContext<'a> {
+    _mpv: &'a Mpv,
     ctx: *mut libmpv2_sys::mpv_render_context,
-    update_callback_cleanup: Option<Box<dyn FnOnce()>>,
+    update_callback_cleanup: Cell<Option<Box<dyn FnOnce()>>>,
 }
 
-/// For initializing the mpv OpenGL state via RenderParam::OpenGLInitParams
+/// For initializing the mpv OpenGL state via [RenderParam::InitParams]
 pub struct OpenGLInitParams<GLContext: 'static> {
     /// This retrieves OpenGL function pointers, and will use them in subsequent
     /// operation.
@@ -28,7 +31,7 @@ pub struct OpenGLInitParams<GLContext: 'static> {
     pub ctx: GLContext,
 }
 
-/// For RenderParam::FBO
+/// For [RenderParam::FBO]
 pub struct FBO {
     pub fbo: i32,
     pub width: i32,
@@ -119,7 +122,10 @@ impl<C> From<&RenderParam<C>> for u32 {
     }
 }
 
-unsafe extern "C" fn gpa_wrapper<GLContext: 'static>(ctx: *mut c_void, name: *const c_char) -> *mut c_void {
+unsafe extern "C" fn gpa_wrapper<GLContext: 'static>(
+    ctx: *mut c_void,
+    name: *const c_char,
+) -> *mut c_void {
     if ctx.is_null() {
         panic!("ctx for get_proc_address wrapper is NULL");
     }
@@ -200,11 +206,11 @@ unsafe fn free_init_params<C: 'static>(ptr: *mut c_void) {
     drop(unsafe { Box::from_raw(params.get_proc_address_ctx as *mut OpenGLInitParams<C>) });
 }
 
-impl RenderContext {
-    pub fn new<C: 'static>(
-        mpv: &mut libmpv2_sys::mpv_handle,
+impl Mpv {
+    pub fn create_render_context<C: 'static>(
+        &'_ self,
         params: impl IntoIterator<Item = RenderParam<C>>,
-    ) -> Result<Self> {
+    ) -> Result<RenderContext<'_>> {
         let params: Vec<_> = params.into_iter().collect();
         let mut raw_params: Vec<libmpv2_sys::mpv_render_param> = Vec::new();
         raw_params.reserve(params.len() + 1);
@@ -240,22 +246,25 @@ impl RenderContext {
             let raw_array =
                 Box::into_raw(raw_params.into_boxed_slice()) as *mut libmpv2_sys::mpv_render_param;
             let ctx = Box::into_raw(Box::new(std::ptr::null_mut() as _));
-            let err = libmpv2_sys::mpv_render_context_create(ctx, &mut *mpv, raw_array);
+            let err = libmpv2_sys::mpv_render_context_create(ctx, self.ctx.as_ptr(), raw_array);
             drop(Box::from_raw(raw_array));
             for (ptr, deleter) in raw_ptrs.iter() {
                 (deleter)(*ptr as _);
             }
 
             mpv_err(
-                Self {
+                RenderContext {
+                    _mpv: &self,
                     ctx: *Box::from_raw(ctx),
-                    update_callback_cleanup: None,
+                    update_callback_cleanup: Cell::new(None),
                 },
                 err,
             )
         }
     }
+}
 
+impl<'a> RenderContext<'a> {
     pub fn set_parameter<C: 'static>(&self, param: RenderParam<C>) -> Result<()> {
         unsafe {
             mpv_err(
@@ -321,7 +330,13 @@ impl RenderContext {
     /// * `flip` - Whether to draw the image upside down. This is needed for OpenGL because
     ///            it uses a coordinate system with positive Y up, but videos use positive
     ///            Y down.
-    pub fn render<GLContext: 'static>(&self, fbo: i32, width: i32, height: i32, flip: bool) -> Result<()> {
+    pub fn render<GLContext: 'static>(
+        &self,
+        fbo: i32,
+        width: i32,
+        height: i32,
+        flip: bool,
+    ) -> Result<()> {
         let mut raw_params: Vec<libmpv2_sys::mpv_render_param> = Vec::with_capacity(3);
         let mut raw_ptrs: HashMap<*const c_void, DeleterFn> = HashMap::new();
 
@@ -380,14 +395,15 @@ impl RenderContext {
     /// no OpenGL state or API is accessed.
     ///
     /// Calling this will raise an update callback immediately.
-    pub fn set_update_callback<F: Fn() + Send + 'static>(&mut self, callback: F) {
+    pub fn set_update_callback<F: Fn() + Send + 'static>(&self, callback: F) {
         if let Some(update_callback_cleanup) = self.update_callback_cleanup.take() {
             update_callback_cleanup();
         }
         let raw_callback = Box::into_raw(Box::new(callback));
-        self.update_callback_cleanup = Some(Box::new(move || unsafe {
-            drop(Box::from_raw(raw_callback));
-        }) as Box<dyn FnOnce()>);
+        self.update_callback_cleanup
+            .replace(Some(Box::new(move || unsafe {
+                drop(Box::from_raw(raw_callback));
+            }) as Box<dyn FnOnce()>));
         unsafe {
             libmpv2_sys::mpv_render_context_set_update_callback(
                 self.ctx,
@@ -429,7 +445,7 @@ impl RenderContext {
     }
 }
 
-impl Drop for RenderContext {
+impl Drop for RenderContext<'_> {
     fn drop(&mut self) {
         if let Some(update_callback_cleanup) = self.update_callback_cleanup.take() {
             update_callback_cleanup();

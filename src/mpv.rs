@@ -19,6 +19,7 @@ pub use self::errors::*;
 use super::*;
 
 use std::{
+    cell::Cell,
     ffi::CString,
     mem::MaybeUninit,
     ops::Deref,
@@ -241,7 +242,7 @@ impl MpvInitializer {
 pub struct Mpv {
     /// The handle to the mpv core
     pub ctx: NonNull<libmpv2_sys::mpv_handle>,
-    wakeup_callback_cleanup: Option<Box<dyn FnOnce()>>,
+    wakeup_callback_cleanup: Cell<Option<Box<dyn FnOnce()>>>,
 }
 
 unsafe impl Send for Mpv {}
@@ -353,10 +354,26 @@ impl Mpv {
 
         Ok(Mpv {
             ctx,
-            wakeup_callback_cleanup: None,
+            wakeup_callback_cleanup: Cell::new(None),
         })
     }
 
+    /// Create a new client handle connected to the same player core as `Mpv`. This
+    /// context has its own event queue, its own [`enable_event`](Mpv::enable_event)
+    /// and [`disable_event`](Mpv::disable_event) states, its own
+    /// mpv_request_log_messages() state (unimplemented), its own set of observed
+    /// properties, and its own state for asynchronous operations. Otherwise,
+    /// everything is shared.
+    ///
+    /// The core will live as long as there is at least 1 handle referencing
+    /// it. Any handle can make the core quit, which will result in every handle
+    /// receiving MPV_EVENT_SHUTDOWN.
+    ///
+    /// @param name The client name. This will be returned by mpv_client_name()
+    ///             (unimplemented). If the name is already in use, or contains
+    ///             non-alphanumeric characters (other than '_'), the name is
+    ///             modified to fit. If `None`, an arbitrary name is automatically
+    ///             chosen.
     pub fn create_client(&self, name: Option<&str>) -> Result<Mpv> {
         let mpv_handle = unsafe {
             libmpv2_sys::mpv_create_client(
@@ -373,7 +390,7 @@ impl Mpv {
 
         Ok(Mpv {
             ctx,
-            wakeup_callback_cleanup: None,
+            wakeup_callback_cleanup: Cell::new(None),
         })
     }
 

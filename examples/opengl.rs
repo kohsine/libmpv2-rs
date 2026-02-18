@@ -1,6 +1,6 @@
 use libmpv2::{
     Mpv,
-    render::{OpenGLInitParams, RenderContext, RenderParam, RenderParamApiType},
+    render::{OpenGLInitParams, RenderParam, RenderParamApiType},
 };
 use std::{env, ffi::c_void};
 
@@ -23,22 +23,20 @@ fn main() {
         .nth(1)
         .unwrap_or_else(|| String::from(VIDEO_URL));
 
-    let mut mpv = Mpv::with_initializer(|init| {
+    let mpv = Mpv::with_initializer(|init| {
         init.set_property("vo", "libmpv")?;
         Ok(())
     })
     .unwrap();
-    let mut render_context = RenderContext::new(
-        unsafe { mpv.ctx.as_mut() },
-        vec![
+    let render_context = mpv
+        .create_render_context(vec![
             RenderParam::ApiType(RenderParamApiType::OpenGl),
             RenderParam::InitParams(OpenGLInitParams {
                 get_proc_address,
                 ctx: video,
             }),
-        ],
-    )
-    .expect("Failed creating render context");
+        ])
+        .expect("Failed creating render context");
 
     event_subsystem
         .register_custom_event::<UserEvent>()
