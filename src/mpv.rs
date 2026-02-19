@@ -303,10 +303,6 @@ impl Mpv {
     /// [`set_property`](Mpv::set_property). Files for playback must be
     /// loaded with [`command`](Mpv::command) or others.
     ///
-    /// Note that you should avoid doing concurrent accesses on the
-    /// uninitialized `Mpv` instance. (Whether concurrent access is definitely
-    /// allowed or not has yet to be decided.)
-    ///
     /// Will return `Err` if out of memory or LC_NUMERIC is not set to "C".
     pub fn new() -> Result<Mpv> {
         Mpv::with_initializer(|_| Ok(()))
@@ -358,7 +354,7 @@ impl Mpv {
         })
     }
 
-    /// Create a new client handle connected to the same player core as `Mpv`. This
+    /// Create a new client handle connected to the same player core as `self`. This
     /// context has its own event queue, its own [`enable_event`](Mpv::enable_event)
     /// and [`disable_event`](Mpv::disable_event) states, its own
     /// mpv_request_log_messages() state (unimplemented), its own set of observed
@@ -366,14 +362,15 @@ impl Mpv {
     /// everything is shared.
     ///
     /// The core will live as long as there is at least 1 handle referencing
-    /// it. Any handle can make the core quit, which will result in every handle
-    /// receiving MPV_EVENT_SHUTDOWN.
+    /// it.
     ///
-    /// @param name The client name. This will be returned by mpv_client_name()
-    ///             (unimplemented). If the name is already in use, or contains
-    ///             non-alphanumeric characters (other than '_'), the name is
-    ///             modified to fit. If `None`, an arbitrary name is automatically
-    ///             chosen.
+    /// # Arguments
+    ///
+    /// * `name` - The client name. This will be returned by mpv_client_name()
+    ///            (unimplemented). If the name is already in use, or contains
+    ///            non-alphanumeric characters (other than '_'), the name is
+    ///            modified to fit. If `None`, an arbitrary name is automatically
+    ///            chosen.
     pub fn create_client(&self, name: Option<&str>) -> Result<Mpv> {
         let mpv_handle = unsafe {
             libmpv2_sys::mpv_create_client(
