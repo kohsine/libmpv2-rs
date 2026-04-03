@@ -19,7 +19,6 @@ pub use self::errors::*;
 use super::*;
 
 use std::{
-    cell::Cell,
     ffi::CString,
     mem::MaybeUninit,
     ops::Deref,
@@ -242,7 +241,7 @@ impl MpvInitializer {
 pub struct Mpv {
     /// The handle to the mpv core
     pub ctx: NonNull<libmpv2_sys::mpv_handle>,
-    wakeup_callback_cleanup: Cell<Option<Box<dyn FnOnce()>>>,
+    wakeup_callback_cleanup: Option<Box<dyn FnOnce()>>,
 }
 
 unsafe impl Send for Mpv {}
@@ -350,7 +349,7 @@ impl Mpv {
 
         Ok(Mpv {
             ctx,
-            wakeup_callback_cleanup: Cell::new(None),
+            wakeup_callback_cleanup: None,
         })
     }
 
@@ -387,7 +386,7 @@ impl Mpv {
 
         Ok(Mpv {
             ctx,
-            wakeup_callback_cleanup: Cell::new(None),
+            wakeup_callback_cleanup: None,
         })
     }
 

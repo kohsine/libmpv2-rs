@@ -4,12 +4,11 @@
 
 - Exclude `test-data/` folder from publishing to reduce download size
 - [breaking] `RenderContext::new()` replaced by `Mpv::create_render_context()`
-- Fixed possible use-after-free if `RenderContext` lives longer than `Mpv`
-- `Mpv::wait_event()` changed from `&mut self` to `&self`
-- `Mpv::set_wakeup_callback()` changed from `&mut self` to `&self`
-- `Mpv::set_update_callback()` changed from `&mut self` to `&self`
 - [breaking] `'static` trait bound added to `OpenGLInitParams<GLContext>` @Wybxc
-- Fixed possible use-after-free if `GLContext` in `OpenGLInitParams` contains any references that are dropped before `Mpv` @Wybxc
+- Fix possible use-after-free if `GLContext` in `OpenGLInitParams` contains any references that are dropped before `Mpv` @Wybxc
+- Fix race condition causing a use-after-free between setting and calling the mpv render context update callback
+- Fix race condition causing a use-after-free between setting and calling the mpv wakeup callback
+- [breaking] `RenderContext` now acts like it owns a reference to `Mpv`
 
 ## Version 5.0.3
 

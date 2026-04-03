@@ -1,17 +1,17 @@
 use crate::Mpv;
 use crate::{Error, Result, mpv::mpv_err};
-use std::cell::Cell;
 use std::collections::HashMap;
 use std::ffi::{CStr, c_char, c_void};
+use std::marker::PhantomData;
 use std::os::raw::c_int;
 use std::ptr;
 
 type DeleterFn = unsafe fn(*mut c_void);
 
 pub struct RenderContext<'a> {
-    _mpv: &'a Mpv,
     ctx: *mut libmpv2_sys::mpv_render_context,
-    update_callback_cleanup: Cell<Option<Box<dyn FnOnce()>>>,
+    update_callback_cleanup: Option<Box<dyn FnOnce()>>,
+    _marker: PhantomData<&'a Mpv>,
 }
 
 /// For initializing the mpv OpenGL state via [RenderParam::InitParams]
@@ -254,9 +254,9 @@ impl Mpv {
 
             mpv_err(
                 RenderContext {
-                    _mpv: &self,
                     ctx: *Box::from_raw(ctx),
-                    update_callback_cleanup: Cell::new(None),
+                    update_callback_cleanup: None,
+                    _marker: PhantomData,
                 },
                 err,
             )
@@ -395,21 +395,25 @@ impl<'a> RenderContext<'a> {
     /// no OpenGL state or API is accessed.
     ///
     /// Calling this will raise an update callback immediately.
-    pub fn set_update_callback<F: Fn() + Send + 'static>(&self, callback: F) {
-        if let Some(update_callback_cleanup) = self.update_callback_cleanup.take() {
-            update_callback_cleanup();
-        }
+    pub fn set_update_callback<F: Fn() + Send + 'static>(&mut self, callback: F) {
         let raw_callback = Box::into_raw(Box::new(callback));
-        self.update_callback_cleanup
-            .replace(Some(Box::new(move || unsafe {
-                drop(Box::from_raw(raw_callback));
-            }) as Box<dyn FnOnce()>));
+
+        // This has to be called before the cleanup so mpv does not try to call
+        // the old callback after cleanup
         unsafe {
             libmpv2_sys::mpv_render_context_set_update_callback(
                 self.ctx,
                 Some(ru_wrapper::<F>),
                 raw_callback as *mut c_void,
             );
+        }
+
+        if let Some(old_callback_cleanup) =
+            self.update_callback_cleanup.replace(Box::new(move || {
+                drop(unsafe { Box::from_raw(raw_callback) });
+            }) as Box<dyn FnOnce()>)
+        {
+            old_callback_cleanup();
         }
     }
 

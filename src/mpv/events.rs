@@ -322,21 +322,25 @@ impl Mpv {
     /// dispatches the result to a callback.
     ///
     /// Only one wakeup callback can be set.
-    pub fn set_wakeup_callback<F: Fn() + Send + 'static>(&self, callback: F) {
-        if let Some(wakeup_callback_cleanup) = self.wakeup_callback_cleanup.take() {
-            wakeup_callback_cleanup();
-        }
+    pub fn set_wakeup_callback<F: Fn() + Send + 'static>(&mut self, callback: F) {
         let raw_callback = Box::into_raw(Box::new(callback));
-        self.wakeup_callback_cleanup
-            .replace(Some(Box::new(move || unsafe {
-                drop(Box::from_raw(raw_callback));
-            }) as Box<dyn FnOnce()>));
+
+        // This has to be called before the cleanup so mpv does not try to call
+        // the old callback after cleanup
         unsafe {
             libmpv2_sys::mpv_set_wakeup_callback(
                 self.ctx.as_ptr(),
                 Some(wu_wrapper::<F>),
                 raw_callback as *mut c_void,
             );
+        }
+
+        if let Some(old_callback_cleanup) =
+            self.wakeup_callback_cleanup.replace(Box::new(move || {
+                drop(unsafe { Box::from_raw(raw_callback) });
+            }) as Box<dyn FnOnce()>)
+        {
+            old_callback_cleanup();
         }
     }
 }

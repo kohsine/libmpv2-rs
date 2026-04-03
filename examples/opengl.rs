@@ -28,7 +28,7 @@ fn main() {
         Ok(())
     })
     .unwrap();
-    let render_context = mpv
+    let mut render_context = mpv
         .create_render_context(vec![
             RenderParam::ApiType(RenderParamApiType::OpenGl),
             RenderParam::InitParams(OpenGLInitParams {
@@ -42,8 +42,6 @@ fn main() {
         .register_custom_event::<UserEvent>()
         .unwrap();
 
-    mpv.disable_deprecated_events().unwrap();
-
     let event_sender = event_subsystem.event_sender();
     render_context.set_update_callback(move || {
         event_sender
@@ -52,7 +50,10 @@ fn main() {
     });
 
     let event_sender = event_subsystem.event_sender();
-    mpv.set_wakeup_callback(move || {
+
+    let mut mpv_client = mpv.create_client(None).unwrap();
+    mpv_client.disable_deprecated_events().unwrap();
+    mpv_client.set_wakeup_callback(move || {
         event_sender
             .push_custom_event(UserEvent::MpvEventAvailable)
             .unwrap();
@@ -73,7 +74,7 @@ fn main() {
                         window.gl_swap_window();
                     }
                     UserEvent::MpvEventAvailable => loop {
-                        match mpv.wait_event(0.0) {
+                        match mpv_client.wait_event(0.0) {
                             Some(Ok(libmpv2::events::Event::EndFile(_))) => {
                                 break 'render;
                             }
