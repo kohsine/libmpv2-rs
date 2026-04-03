@@ -9,6 +9,7 @@
 - Fix race condition causing a use-after-free between setting and calling the mpv render context update callback
 - Fix race condition causing a use-after-free between setting and calling the mpv wakeup callback
 - [breaking] `RenderContext` now acts like it owns a reference to `Mpv`
+- [breaking] Remove unused Error::LoadFile
 
 ## Version 5.0.3
 

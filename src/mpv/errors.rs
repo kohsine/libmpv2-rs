@@ -1,13 +1,10 @@
-use std::{error, ffi::NulError, fmt, os::raw as ctype, rc::Rc, str::Utf8Error};
+use std::{error, ffi::NulError, fmt, os::raw as ctype, str::Utf8Error};
 
 #[allow(missing_docs)]
 pub type Result<T> = ::std::result::Result<T, Error>;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Error {
-    Loadfile {
-        error: Rc<Error>,
-    },
     VersionMismatch {
         linked: ctype::c_ulong,
         loaded: ctype::c_ulong,
