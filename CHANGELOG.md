@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- [breaking] Fix deprecated event not being disabled by `Mpv::disable_deprecated_events()`
+
 ## Version 6.0.0
 
 - Exclude `test-data/` folder from publishing to reduce download size

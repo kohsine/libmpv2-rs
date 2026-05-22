@@ -64,6 +64,23 @@ macro_rules! assert_event_occurs {
     }
 }
 
+// Asserts that events from mpv are in the subset of given events
+macro_rules! assert_events_subset {
+    ($ctx:ident, $timeout:literal, $( $expected:pat),+) => {
+        loop {
+            match $ctx.wait_event($timeout) {
+                $( Some($expected) )|+ => {
+                    continue;
+                },
+                None => {
+                    break
+                },
+                other => panic!("Event did not occur, got: {:?}", other),
+            }
+        }
+    }
+}
+
 #[test]
 fn events() {
     let mpv = Mpv::new().unwrap();
@@ -101,49 +118,42 @@ fn events() {
     assert!(mpv.wait_event(3.).is_none());
     mpv.command("loadfile", &["test-data/jellyfish.mp4", "append-play"])
         .unwrap();
-    assert_event_occurs!(mpv, 10., Ok(Event::StartFile));
-    assert_event_occurs!(
+
+    assert_events_subset!(
         mpv,
-        10.,
+        3.,
+        Ok(Event::StartFile),
         Ok(Event::PropertyChange {
             name: "media-title",
             change: PropertyData::Str("jellyfish.mp4"),
             reply_userdata: 1,
-        })
+        }),
+        Ok(Event::AudioReconfig),
+        Ok(Event::FileLoaded),
+        Ok(Event::VideoReconfig),
+        Ok(Event::PlaybackRestart),
+        Ok(Event::EndFile(mpv_end_file_reason::Eof))
     );
-    assert_event_occurs!(mpv, 3., Ok(Event::AudioReconfig));
-    assert_event_occurs!(mpv, 3., Ok(Event::AudioReconfig));
-    assert_event_occurs!(mpv, 3., Ok(Event::FileLoaded));
-    assert_event_occurs!(mpv, 3., Ok(Event::AudioReconfig));
-    assert_event_occurs!(mpv, 3., Ok(Event::VideoReconfig));
 
     mpv.command("loadfile", &["test-data/speech_12kbps_mb.wav", "replace"])
         .unwrap();
-    assert_event_occurs!(mpv, 3., Ok(Event::VideoReconfig));
-    assert_event_occurs!(mpv, 3., Ok(Event::AudioReconfig));
-    assert_event_occurs!(mpv, 3., Ok(Event::VideoReconfig));
-    assert_event_occurs!(mpv, 3., Ok(Event::EndFile(mpv_end_file_reason::Stop)));
-    assert_event_occurs!(mpv, 3., Ok(Event::StartFile));
-    assert_event_occurs!(
+
+    assert_events_subset!(
         mpv,
         3.,
+        Ok(Event::StartFile),
         Ok(Event::PropertyChange {
             name: "media-title",
             change: PropertyData::Str("speech_12kbps_mb.wav"),
             reply_userdata: 1,
-        })
+        }),
+        Ok(Event::AudioReconfig),
+        Ok(Event::FileLoaded),
+        Ok(Event::VideoReconfig),
+        Ok(Event::PlaybackRestart),
+        Ok(Event::EndFile(mpv_end_file_reason::Stop)),
+        Ok(Event::EndFile(mpv_end_file_reason::Eof))
     );
-    assert_event_occurs!(mpv, 3., Ok(Event::AudioReconfig));
-    assert_event_occurs!(mpv, 3., Ok(Event::AudioReconfig));
-    assert_event_occurs!(mpv, 3., Ok(Event::VideoReconfig));
-    assert_event_occurs!(mpv, 3., Ok(Event::FileLoaded));
-    assert_event_occurs!(mpv, 3., Ok(Event::AudioReconfig));
-    assert_event_occurs!(mpv, 3., Ok(Event::AudioReconfig));
-    assert_event_occurs!(mpv, 3., Ok(Event::PlaybackRestart));
-    assert_event_occurs!(mpv, 3., Ok(Event::AudioReconfig));
-    assert_event_occurs!(mpv, 10., Ok(Event::EndFile(mpv_end_file_reason::Eof)));
-    assert_event_occurs!(mpv, 3., Ok(Event::AudioReconfig));
-    assert!(mpv.wait_event(3.).is_none());
 }
 
 #[test]

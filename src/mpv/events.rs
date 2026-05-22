@@ -144,6 +144,7 @@ impl Mpv {
     /// Diable all deprecated events.
     pub fn disable_deprecated_events(&self) -> Result<()> {
         self.disable_event(libmpv2_sys::mpv_event_id_MPV_EVENT_IDLE)?;
+        self.disable_event(libmpv2_sys::mpv_event_id_MPV_EVENT_TICK)?;
         Ok(())
     }
 

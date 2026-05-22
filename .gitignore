@@ -2,3 +2,5 @@
 /examples/target
 /mpv-sys/target
 .vscode
+
+*.html
