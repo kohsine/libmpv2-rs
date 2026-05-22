@@ -141,14 +141,14 @@ impl Mpv {
         })
     }
 
-    /// Diable all deprecated events.
+    /// Disable all deprecated events.
     pub fn disable_deprecated_events(&self) -> Result<()> {
         self.disable_event(libmpv2_sys::mpv_event_id_MPV_EVENT_IDLE)?;
         self.disable_event(libmpv2_sys::mpv_event_id_MPV_EVENT_TICK)?;
         Ok(())
     }
 
-    /// Diable all events.
+    /// Disable all events.
     pub fn disable_all_events(&self) -> Result<()> {
         for i in 2..26 {
             self.disable_event(i as _)?;
