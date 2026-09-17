@@ -464,11 +464,18 @@ impl<'a> RenderContext<'a> {
 
 impl Drop for RenderContext<'_> {
     fn drop(&mut self) {
-        if let Some(update_callback_cleanup) = self.update_callback_cleanup.take() {
-            update_callback_cleanup();
-        }
+        // mpv_render_context_free() must run before the cleanups below: mpv's internal render
+        // thread can still be invoking the update callback (set via set_update_callback, or the
+        // OpenGL init params' get_proc_address) concurrently with this Drop, right up until
+        // mpv_render_context_free() returns. Freeing the Rust-side closures first is a
+        // use-after-free race window (small, but real -- surfaced as SIGSEGV in
+        // GWeakRef::upgrade from mpv's render thread reading freed closure memory in a
+        // downstream user of this crate).
         unsafe {
             libmpv2_sys::mpv_render_context_free(self.ctx);
+        }
+        if let Some(update_callback_cleanup) = self.update_callback_cleanup.take() {
+            update_callback_cleanup();
         }
         if let Some(init_params_cleanup) = self.init_params_cleanup.take() {
             init_params_cleanup();

@@ -255,4 +255,95 @@ mod render_context {
             "init params were never freed after the render context was dropped"
         );
     }
+
+    // Regression test for a use-after-free race in `RenderContext::drop`'s cleanup order.
+    //
+    // mpv's internal render thread can invoke the update callback registered via
+    // `set_update_callback` concurrently with `Drop`, right up until
+    // `mpv_render_context_free()` returns. If the Rust-side closure backing that callback is
+    // freed *before* `mpv_render_context_free()` runs, the render thread can read freed memory
+    // through `ru_wrapper` -> the closure. This is a small race window (in a downstream user of
+    // this crate it took two independent `coredumpctl` crash dumps with matching stack traces
+    // to pin down), so a plain `cargo test` run won't reliably catch a regression here -- this
+    // stress test is only deterministic under AddressSanitizer, which poisons freed memory
+    // immediately instead of leaving it to accidentally still look valid.
+    //
+    // Run with:
+    //   rustup component add rust-src --toolchain nightly
+    //   RUSTFLAGS="-Z sanitizer=address" \
+    //     cargo +nightly test -Z build-std --release --target x86_64-unknown-linux-gnu \
+    //     render_context_free_races_update_callback -- --ignored --nocapture
+    #[test]
+    #[ignore = "only meaningful under ASAN, see comment above for the invocation"]
+    fn render_context_free_races_update_callback_under_asan() {
+        use std::sync::atomic::AtomicUsize;
+        use std::time::{Duration, Instant};
+
+        let deadline = Instant::now() + Duration::from_secs(15);
+        let mut iterations = 0u32;
+        let mut iterations_with_activity = 0u32;
+        let total_fires = Arc::new(AtomicUsize::new(0));
+
+        while Instant::now() < deadline {
+            let (_window, video, _gl_context) = create_hidden_gl_context();
+
+            let mpv = Mpv::with_initializer(|init| {
+                init.set_property("vo", "libmpv")?;
+                Ok(())
+            })
+            .unwrap();
+
+            let mut render_context = mpv
+                .create_render_context(vec![
+                    RenderParam::ApiType(RenderParamApiType::OpenGl),
+                    RenderParam::InitParams(OpenGLInitParams {
+                        get_proc_address,
+                        ctx: InitParamsCtx {
+                            video,
+                            _flag: DropFlag(Arc::new(AtomicBool::new(false))),
+                        },
+                    }),
+                ])
+                .expect("failed to create render context");
+
+            // Heap-allocated state the callback touches on every invocation, so ASAN has
+            // something to flag as heap-use-after-free if the render thread calls back into
+            // this closure after Drop has already freed it.
+            let fired = Arc::new(AtomicUsize::new(0));
+            let fired_in_callback = fired.clone();
+            let total_fires_in_callback = total_fires.clone();
+            let padding = Box::new([0u8; 256]);
+            render_context.set_update_callback(move || {
+                let _ = padding[0];
+                fired_in_callback.fetch_add(1, Ordering::SeqCst);
+                total_fires_in_callback.fetch_add(1, Ordering::SeqCst);
+            });
+
+            mpv.command("loadfile", &["test-data/jellyfish.mp4", "replace"])
+                .unwrap();
+
+            // set_update_callback() raises one callback synchronously, on this thread, as part
+            // of registering it -- that doesn't race anything. Wait for a *second* firing,
+            // which can only come from mpv's internal decode/render thread delivering an
+            // asynchronous redraw notification, then drop immediately: that's the actual race
+            // window the fix closes.
+            let wait_deadline = Instant::now() + Duration::from_millis(200);
+            while fired.load(Ordering::SeqCst) < 2 && Instant::now() < wait_deadline {
+                std::thread::yield_now();
+            }
+            if fired.load(Ordering::SeqCst) >= 2 {
+                iterations_with_activity += 1;
+            }
+
+            drop(render_context);
+
+            iterations += 1;
+        }
+
+        eprintln!(
+            "completed {iterations} create/drop iterations ({iterations_with_activity} with \
+             observed callback activity, {} total callback fires) without an ASAN report",
+            total_fires.load(Ordering::SeqCst)
+        );
+    }
 }
