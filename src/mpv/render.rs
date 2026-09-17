@@ -11,6 +11,7 @@ type DeleterFn = unsafe fn(*mut c_void);
 pub struct RenderContext<'a> {
     ctx: *mut libmpv2_sys::mpv_render_context,
     update_callback_cleanup: Option<Box<dyn FnOnce()>>,
+    init_params_cleanup: Option<Box<dyn FnOnce()>>,
     _marker: PhantomData<&'a Mpv>,
 }
 
@@ -215,12 +216,14 @@ impl Mpv {
         let mut raw_params: Vec<libmpv2_sys::mpv_render_param> = Vec::new();
         raw_params.reserve(params.len() + 1);
         let mut raw_ptrs: HashMap<*const c_void, DeleterFn> = HashMap::new();
+        let mut init_params_ptr: Option<*mut c_void> = None;
 
         for p in params {
             // The render params are type-erased after they are passed to mpv. This is where we last
             // know their real types, so we keep a deleter here.
+            let is_init_params = matches!(p, RenderParam::InitParams(_));
             let deleter: Option<DeleterFn> = match p {
-                RenderParam::InitParams(_) => Some(free_init_params::<C>),
+                RenderParam::InitParams(_) => None,
                 RenderParam::FBO(_) => Some(free_void_data::<FBO>),
                 RenderParam::FlipY(_) => Some(free_void_data::<i32>),
                 RenderParam::Depth(_) => Some(free_void_data::<i32>),
@@ -230,7 +233,9 @@ impl Mpv {
                 _ => None,
             };
             let raw_param: libmpv2_sys::mpv_render_param = p.into();
-            if let Some(deleter) = deleter {
+            if is_init_params {
+                init_params_ptr = Some(raw_param.data);
+            } else if let Some(deleter) = deleter {
                 raw_ptrs.insert(raw_param.data, deleter);
             }
 
@@ -252,10 +257,18 @@ impl Mpv {
                 (deleter)(*ptr as _);
             }
 
+            // get_proc_address_ctx must outlive the render context: render_gl.h says every
+            // mpv_render_* call may resolve a GL function through it, not just context
+            // creation (https://github.com/mpv-player/mpv/blob/v0.41.0/include/mpv/render_gl.h#L33-L44),
+            // so its cleanup can't happen here — deferred to Drop.
+            let init_params_cleanup: Option<Box<dyn FnOnce()>> = init_params_ptr
+                .map(|ptr| Box::new(move || free_init_params::<C>(ptr)) as Box<dyn FnOnce()>);
+
             mpv_err(
                 RenderContext {
                     ctx: *Box::from_raw(ctx),
                     update_callback_cleanup: None,
+                    init_params_cleanup,
                     _marker: PhantomData,
                 },
                 err,
@@ -456,6 +469,9 @@ impl Drop for RenderContext<'_> {
         }
         unsafe {
             libmpv2_sys::mpv_render_context_free(self.ctx);
+        }
+        if let Some(init_params_cleanup) = self.init_params_cleanup.take() {
+            init_params_cleanup();
         }
     }
 }
