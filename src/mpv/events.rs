@@ -36,13 +36,20 @@ pub enum PropertyData<'a> {
     Flag(bool),
     Int64(i64),
     Double(ctype::c_double),
+    None,
 }
 
 impl<'a> PropertyData<'a> {
     // SAFETY: meant to extract the data from an event property. See `mpv_event_property` in
     // `client.h`
     unsafe fn from_raw(format: MpvFormat, ptr: *mut ctype::c_void) -> Result<PropertyData<'a>> {
+        // This happens if the property is not available. For example,
+        // if you reached EndFile while observing a property.
+        if format == mpv_format::None {
+            return Ok(PropertyData::None);
+        }
         assert!(!ptr.is_null());
+
         unsafe {
             match format {
                 mpv_format::Flag => Ok(PropertyData::Flag(*(ptr as *mut bool))),
@@ -56,7 +63,6 @@ impl<'a> PropertyData<'a> {
                 }
                 mpv_format::Double => Ok(PropertyData::Double(*(ptr as *mut f64))),
                 mpv_format::Int64 => Ok(PropertyData::Int64(*(ptr as *mut i64))),
-                mpv_format::None => unreachable!(),
                 _ => unimplemented!(),
             }
         }
@@ -265,24 +271,17 @@ impl Mpv {
             mpv_event_id::PropertyChange => {
                 let property = unsafe { *(event.data as *mut libmpv2_sys::mpv_event_property) };
 
-                // This happens if the property is not available. For example,
-                // if you reached EndFile while observing a property.
-                if property.format == mpv_format::None {
-                    None
-                } else {
-                    let name = unsafe { mpv_cstr_to_str!(property.name) };
-                    Some(name.and_then(|name| {
-                        // SAFETY: safe because we are passing format + data from an mpv_event_property
-                        let change =
-                            unsafe { PropertyData::from_raw(property.format, property.data) }?;
+                let name = unsafe { mpv_cstr_to_str!(property.name) };
+                Some(name.and_then(|name| {
+                    // SAFETY: safe because we are passing format + data from an mpv_event_property
+                    let change = unsafe { PropertyData::from_raw(property.format, property.data) }?;
 
-                        Ok(Event::PropertyChange {
-                            name,
-                            change,
-                            reply_userdata: event.reply_userdata,
-                        })
-                    }))
-                }
+                    Ok(Event::PropertyChange {
+                        name,
+                        change,
+                        reply_userdata: event.reply_userdata,
+                    })
+                }))
             }
             mpv_event_id::QueueOverflow => Some(Ok(Event::QueueOverflow)),
             _ => Some(Ok(Event::Deprecated(event))),

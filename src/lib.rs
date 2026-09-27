@@ -56,8 +56,8 @@ pub mod mpv_error {
     pub use libmpv2_sys::mpv_error_MPV_ERROR_INVALID_PARAMETER as InvalidParameter;
     pub use libmpv2_sys::mpv_error_MPV_ERROR_LOADING_FAILED as LoadingFailed;
     pub use libmpv2_sys::mpv_error_MPV_ERROR_NOMEM as NoMem;
-    pub use libmpv2_sys::mpv_error_MPV_ERROR_NOTHING_TO_PLAY as NothingToPlay;
     pub use libmpv2_sys::mpv_error_MPV_ERROR_NOT_IMPLEMENTED as NotImplemented;
+    pub use libmpv2_sys::mpv_error_MPV_ERROR_NOTHING_TO_PLAY as NothingToPlay;
     pub use libmpv2_sys::mpv_error_MPV_ERROR_OPTION_ERROR as OptionError;
     pub use libmpv2_sys::mpv_error_MPV_ERROR_OPTION_FORMAT as OptionFormat;
     pub use libmpv2_sys::mpv_error_MPV_ERROR_OPTION_NOT_FOUND as OptionNotFound;
