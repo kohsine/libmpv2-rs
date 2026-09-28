@@ -26,7 +26,7 @@ use std::{
 };
 
 fn mpv_err<T>(ret: T, err: ctype::c_int) -> Result<T> {
-    if err == 0 {
+    if err >= 0 {
         Ok(ret)
     } else {
         Err(Error::Raw(err))
