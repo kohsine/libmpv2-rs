@@ -19,10 +19,10 @@ pub use self::errors::*;
 use super::*;
 
 use std::{
-    ffi::CString,
+    ffi::{CStr, CString},
     mem::MaybeUninit,
     ops::Deref,
-    ptr::{self, NonNull},
+    ptr::{self, NonNull, null},
 };
 
 fn mpv_err<T>(ret: T, err: ctype::c_int) -> Result<T> {
@@ -242,6 +242,9 @@ pub struct Mpv {
     /// The handle to the mpv core
     pub ctx: NonNull<libmpv2_sys::mpv_handle>,
     wakeup_callback_cleanup: Option<Box<dyn FnOnce()>>,
+    // Only used for clients
+    // Need this to free client name later on
+    name_ptr: *const i8,
 }
 
 unsafe impl Send for Mpv {}
@@ -249,6 +252,10 @@ unsafe impl Sync for Mpv {}
 
 impl Drop for Mpv {
     fn drop(&mut self) {
+        if !self.name_ptr.is_null() {
+            let _ = unsafe { CString::from_raw(CStr::from_ptr(self.name_ptr).as_ptr().cast_mut()) };
+        }
+
         if let Some(wakeup_callback_cleanup) = self.wakeup_callback_cleanup.take() {
             wakeup_callback_cleanup();
         }
@@ -350,6 +357,7 @@ impl Mpv {
         Ok(Mpv {
             ctx,
             wakeup_callback_cleanup: None,
+            name_ptr: null(),
         })
     }
 
@@ -371,22 +379,19 @@ impl Mpv {
     ///            modified to fit. If `None`, an arbitrary name is automatically
     ///            chosen.
     pub fn create_client(&self, name: Option<&str>) -> Result<Mpv> {
-        let mpv_handle = unsafe {
-            libmpv2_sys::mpv_create_client(
-                self.ctx.as_ptr(),
-                if let Some(name) = name {
-                    CString::new(name)?.into_raw()
-                } else {
-                    ptr::null()
-                },
-            )
+        let ptr = if let Some(name) = name {
+            CString::new(name)?.into_raw()
+        } else {
+            ptr::null()
         };
+        let mpv_handle = unsafe { libmpv2_sys::mpv_create_client(self.ctx.as_ptr(), ptr) };
 
         let ctx = unsafe { NonNull::new_unchecked(mpv_handle) };
 
         Ok(Mpv {
             ctx,
             wakeup_callback_cleanup: None,
+            name_ptr: null(),
         })
     }
 
