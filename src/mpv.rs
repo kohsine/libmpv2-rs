@@ -375,7 +375,7 @@ impl Mpv {
             libmpv2_sys::mpv_create_client(
                 self.ctx.as_ptr(),
                 if let Some(name) = name {
-                    CString::new(name)?.as_ptr()
+                    CString::new(name)?.into_raw()
                 } else {
                     ptr::null()
                 },
