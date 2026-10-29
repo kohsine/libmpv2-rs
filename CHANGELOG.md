@@ -4,6 +4,9 @@
 
 - [breaking] Fix deprecated event not being disabled by `Mpv::disable_deprecated_events()`
 
+## version 6.0.1
+- Fix name string being dropped too early when creating a new client with a name.
+
 ## Version 6.0.0
 
 - Exclude `test-data/` folder from publishing to reduce download size

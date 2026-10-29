@@ -1,6 +1,7 @@
 use crate::events::{Event, PropertyData};
 use crate::*;
 
+use std::ffi::CStr;
 use std::thread;
 use std::time::Duration;
 
@@ -18,6 +19,53 @@ fn initializer() {
     assert_eq!(true, mpv.get_property("osc").unwrap());
     assert_eq!(true, mpv.get_property("input-default-bindings").unwrap());
     assert_eq!(30i64, mpv.get_property("volume").unwrap());
+}
+
+#[test]
+fn client_with_name() {
+    let mpv = Mpv::new().unwrap();
+    let client = mpv.create_client(Some("name")).unwrap();
+    let name = unsafe { libmpv2_sys::mpv_client_name(client.ctx.as_ptr()) };
+    let cstr = unsafe { CStr::from_ptr(name) };
+    assert_eq!(cstr.to_str().unwrap(), "name");
+}
+
+#[test]
+fn client_with_duplicate_name() {
+    let mpv = Mpv::new().unwrap();
+    let client1 = mpv.create_client(Some("name")).unwrap();
+    let client2 = mpv.create_client(Some("name")).unwrap();
+    let name1 = unsafe { libmpv2_sys::mpv_client_name(client1.ctx.as_ptr()) };
+    let name2 = unsafe { libmpv2_sys::mpv_client_name(client2.ctx.as_ptr()) };
+    let cstr1 = unsafe { CStr::from_ptr(name1) };
+    let cstr2 = unsafe { CStr::from_ptr(name2) };
+    assert_eq!(cstr1.to_str().unwrap(), "name");
+    assert_eq!(cstr2.to_str().unwrap(), "name2");
+}
+
+#[test]
+fn client_without_name() {
+    let mpv = Mpv::new().unwrap();
+    let client1 = mpv.create_client(None).unwrap();
+    let client2 = mpv.create_client(None).unwrap();
+    let client3 = mpv.create_client(None).unwrap();
+    let client4 = mpv.create_client(None).unwrap();
+    let client5 = mpv.create_client(None).unwrap();
+    let name1 = unsafe { libmpv2_sys::mpv_client_name(client1.ctx.as_ptr()) };
+    let name2 = unsafe { libmpv2_sys::mpv_client_name(client2.ctx.as_ptr()) };
+    let name3 = unsafe { libmpv2_sys::mpv_client_name(client3.ctx.as_ptr()) };
+    let name4 = unsafe { libmpv2_sys::mpv_client_name(client4.ctx.as_ptr()) };
+    let name5 = unsafe { libmpv2_sys::mpv_client_name(client5.ctx.as_ptr()) };
+    let cstr1 = unsafe { CStr::from_ptr(name1) };
+    let cstr2 = unsafe { CStr::from_ptr(name2) };
+    let cstr3 = unsafe { CStr::from_ptr(name3) };
+    let cstr4 = unsafe { CStr::from_ptr(name4) };
+    let cstr5 = unsafe { CStr::from_ptr(name5) };
+    assert_eq!(cstr1.to_str().unwrap(), "client");
+    assert_eq!(cstr2.to_str().unwrap(), "client2");
+    assert_eq!(cstr3.to_str().unwrap(), "client3");
+    assert_eq!(cstr4.to_str().unwrap(), "client4");
+    assert_eq!(cstr5.to_str().unwrap(), "client5");
 }
 
 #[test]
