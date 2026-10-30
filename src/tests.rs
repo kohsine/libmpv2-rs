@@ -158,6 +158,15 @@ fn events() {
         mpv,
         10.,
         Ok(Event::PropertyChange {
+            name: "media-title",
+            change: PropertyData::None,
+            reply_userdata: 1,
+        })
+    );
+    assert_event_occurs!(
+        mpv,
+        10.,
+        Ok(Event::PropertyChange {
             name: "volume",
             change: PropertyData::Int64(0),
             reply_userdata: 0,
@@ -174,6 +183,11 @@ fn events() {
         Ok(Event::PropertyChange {
             name: "media-title",
             change: PropertyData::Str("jellyfish.mp4"),
+            reply_userdata: 1,
+        }),
+        Ok(Event::PropertyChange {
+            name: "media-title",
+            change: PropertyData::None,
             reply_userdata: 1,
         }),
         Ok(Event::AudioReconfig),
@@ -193,6 +207,11 @@ fn events() {
         Ok(Event::PropertyChange {
             name: "media-title",
             change: PropertyData::Str("speech_12kbps_mb.wav"),
+            reply_userdata: 1,
+        }),
+        Ok(Event::PropertyChange {
+            name: "media-title",
+            change: PropertyData::None,
             reply_userdata: 1,
         }),
         Ok(Event::AudioReconfig),
