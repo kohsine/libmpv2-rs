@@ -36,17 +36,18 @@ pub enum PropertyData<'a> {
     Flag(bool),
     Int64(i64),
     Double(ctype::c_double),
-    None,
 }
 
 impl<'a> PropertyData<'a> {
-    // SAFETY: meant to extract the data from an event property. See `mpv_event_property` in
-    // `client.h`
+    /// SAFETY: meant to extract the data from an event property. See `mpv_event_property` in
+    /// `client.h`
+    ///
+    /// Returns `Err` if property is not available or failed to retrieve property
     unsafe fn from_raw(format: MpvFormat, ptr: *mut ctype::c_void) -> Result<PropertyData<'a>> {
         // This happens if the property is not available. For example,
         // if you reached EndFile while observing a property.
         if format == mpv_format::None {
-            return Ok(PropertyData::None);
+            return Err(Error::Null);
         }
         assert!(!ptr.is_null());
 

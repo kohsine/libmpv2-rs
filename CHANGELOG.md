@@ -3,8 +3,11 @@
 ## Unreleased
 
 - [breaking] Fix deprecated event not being disabled by `Mpv::disable_deprecated_events()`
+- Fix `Mpv::unobserve_property()` successful result being treated as an error @tymmesyde
+- When property is format `MPV_FORMAT_NONE` returns `Err` instead of panicking
 
 ## version 6.0.1
+
 - Fix name string being dropped too early when creating a new client with a name.
 
 ## Version 6.0.0
