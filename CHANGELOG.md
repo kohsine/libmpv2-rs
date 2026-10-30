@@ -2,12 +2,11 @@
 
 ## Unreleased
 
+## Version 7.0.0
+
+- [breaking] When property is format `MPV_FORMAT_NONE` returns `None` variant instead of panicking @tymmesyde
 - [breaking] Fix deprecated event not being disabled by `Mpv::disable_deprecated_events()`
-
-## Version 6.0.2
-
 - Fix `Mpv::unobserve_property()` successful result being treated as an error @tymmesyde
-- When property is format `MPV_FORMAT_NONE` returns `Err` instead of panicking
 
 ## version 6.0.1
 
