@@ -139,6 +139,7 @@ fn events() {
         .unwrap();
 
     mpv.set_property("vo", "null").unwrap();
+    mpv.set_property("ao", "null").unwrap();
 
     // speed up playback so test finishes faster
     mpv.set_property("speed", 100).unwrap();
