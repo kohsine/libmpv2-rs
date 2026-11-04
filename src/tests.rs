@@ -73,6 +73,7 @@ fn properties() {
     let mpv = Mpv::new().unwrap();
     mpv.set_property("volume", 0).unwrap();
     mpv.set_property("vo", "null").unwrap();
+    mpv.set_property("ao", "null").unwrap();
     mpv.set_property("ytdl-format", "best[width<240]").unwrap();
     mpv.set_property("sub-gauss", 0.6).unwrap();
 
