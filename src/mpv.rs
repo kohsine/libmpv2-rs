@@ -19,7 +19,7 @@ pub use self::errors::*;
 use super::*;
 
 use std::{
-    ffi::CString,
+    ffi::{self, CString},
     mem::MaybeUninit,
     ops::Deref,
     ptr::{self, NonNull, null},
@@ -244,7 +244,7 @@ pub struct Mpv {
     wakeup_callback_cleanup: Option<Box<dyn FnOnce()>>,
     // Only used for clients
     // Need this to free client name later on
-    name_ptr: *const i8,
+    name_ptr: *const ffi::c_char,
 }
 
 unsafe impl Send for Mpv {}
