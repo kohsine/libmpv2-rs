@@ -19,7 +19,7 @@ pub use self::errors::*;
 use super::*;
 
 use std::{
-    ffi::{CStr, CString},
+    ffi::CString,
     mem::MaybeUninit,
     ops::Deref,
     ptr::{self, NonNull, null},
@@ -253,7 +253,7 @@ unsafe impl Sync for Mpv {}
 impl Drop for Mpv {
     fn drop(&mut self) {
         if !self.name_ptr.is_null() {
-            let _ = unsafe { CString::from_raw(CStr::from_ptr(self.name_ptr).as_ptr().cast_mut()) };
+            _ = unsafe { CString::from_raw(self.name_ptr.cast_mut()) };
         }
 
         if let Some(wakeup_callback_cleanup) = self.wakeup_callback_cleanup.take() {
