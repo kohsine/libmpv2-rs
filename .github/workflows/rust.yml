@@ -27,7 +27,8 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             build-essential \
             libmpv-dev \
-            libssl-dev
+            libssl-dev \
+            libsdl2-dev 
             
       - name: Build
         run: cargo build --verbose
