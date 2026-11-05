@@ -7,8 +7,17 @@ env:
 
 jobs:
   build:
+    name: Build (${{ matrix.platform }})
 
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - platform: amd64
+            os: ubuntu-26.04
+          - platform: arm64
+            os: ubuntu-26.04-arm
+
+    runs-on: ${{ matrix.os }}
 
     steps:
       - uses: actions/checkout@v4
