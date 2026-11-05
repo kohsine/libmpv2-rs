@@ -1,5 +1,6 @@
 use super::*;
 use std::alloc::{self, Layout};
+use std::ffi::c_char;
 use std::mem;
 use std::os::raw as ctype;
 use std::panic;
@@ -15,7 +16,7 @@ pub type StreamClose<T> = fn(Box<T>);
 pub type StreamSeek<T> = fn(&mut T, i64) -> i64;
 /// Target buffer with fixed capacity.
 /// Return either the number of read bytes, `0` on EOF, or either `-1` or panic on error.
-pub type StreamRead<T> = fn(&mut T, &mut [ctype::c_char]) -> i64;
+pub type StreamRead<T> = fn(&mut T, &mut [c_char]) -> i64;
 /// Return the total size of the stream in bytes. Panic on error.
 pub type StreamSize<T> = fn(&mut T) -> i64;
 
@@ -75,7 +76,7 @@ where
 
 unsafe extern "C" fn read_wrapper<T, U>(
     wrapper_cookie: *mut ctype::c_void,
-    buf: *mut ctype::c_char,
+    buf: *mut c_char,
     nbytes: u64,
 ) -> i64
 where
