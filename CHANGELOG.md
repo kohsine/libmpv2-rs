@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## Version 7.0.1
+
+- Fix protocol example breaking on arm
+- Fix `name_ptr` type breaking builds on arm @tsukinaha
+
 ## Version 7.0.0
 
 - [breaking] When property is format `MPV_FORMAT_NONE` returns `None` variant instead of panicking @tymmesyde
